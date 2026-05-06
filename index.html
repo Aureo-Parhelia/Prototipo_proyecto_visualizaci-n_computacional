@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador de Transformaciones Lineales en R²</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Paleta de colores Premium Unificada */
+      --bg-puro: #010205;        /* Negro puro para canvas */
+      --bg-profundo: #010a13;    /* Fondo principal */
+      --bg-panel: #05101e;       /* Fondo de paneles */
+      --color-oro: #c8aa6e;      /* Oro Biselado para acentos */
+      --color-oro-oscuro: #785a28; /* Oro Sombra para bordes */
+      --color-cian: #0ac8b9;      /* Cian para energía y estado */
+      --color-cian-glow: rgba(10, 200, 185, 0.4);
+      --color-texto: #f0e6d2;    /* Texto Beige claro */
+      --color-error: #ff4655;    /* Rojo para errores técnicos */
+      
+      --transicion-suave: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: var(--bg-profundo);
+      color: var(--color-texto);
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background-image: 
+        radial-gradient(circle at center, #1e2328 0%, var(--bg-profundo) 70%);
+      background-attachment: fixed;
+    }
+
+    /* Brillo de fondo pulsante para impacto visual */
+    body::before {
+      content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle at 50% 120%, rgba(3, 151, 171, 0.1), transparent 50%);
+      pointer-events: none; animation: brilloFondo 8s infinite alternate; z-index: -1;
+    }
+    @keyframes brilloFondo { 0% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    header {
+      margin-bottom: 30px;
+      text-align: center;
+    }
+
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-weight: 800;
+      font-size: 2.5rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin: 0;
+      background: linear-gradient(to bottom, #f0e6d2 0%, var(--color-oro) 50%, var(--color-oro-oscuro) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 15px rgba(200, 170, 110, 0.3);
+    }
+
+    h1::after {
+      content: ''; display: block; width: 180px; height: 2px;
+      background: linear-gradient(to right, transparent, var(--color-oro), transparent);
+      margin: 10px auto 0;
+    }
+
+    .contenedor-principal {
+      display: flex;
+      gap: 30px;
+      max-width: 1200px;
+      width: 95%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* --- ESTILO DE PANEL UNIFICADO Y PROFESIONAL --- */
+    .panel-premium {
+      background: var(--bg-panel);
+      border: 2px solid var(--color-oro-oscuro);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7), inset 0 0 20px rgba(0,0,0,0.5);
+      position: relative;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    /* Esquinas doradas unificadas y contiguas */
+    .panel-premium::before, .panel-premium::after {
+      content: ''; position: absolute; width: 16px; height: 16px;
+      border: 2px solid var(--color-oro);
+      box-shadow: 0 0 10px var(--color-oro-oscuro);
+      z-index: 1;
+    }
+    .panel-premium::before {
+      top: -6px; left: -6px; border-right: none; border-bottom: none;
+    }
+    .panel-premium::after {
+      bottom: -6px; right: -6px; border-left: none; border-top: none;
+    }
+
+    .seccion-controles {
+      width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .grupo-control { margin-bottom: 12px; }
+
+    label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.85rem;
+      color: var(--color-oro);
+      display: block;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+
+    input, select {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--color-oro-oscuro);
+      color: #fff;
+      padding: 12px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 1rem;
+      outline: none;
+      transition: var(--transicion-suave);
+      box-sizing: border-box;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--color-cian);
+      box-shadow: 0 0 10px var(--color-cian-glow);
+    }
+
+    /* --- ESTILO DE BOTÓN PREMIUM --- */
+    .boton-premium {
+      width: 100%;
+      background: linear-gradient(to bottom, #1e2328 0%, #111 100%);
+      color: var(--color-oro);
+      font-family: 'Cinzel', serif;
+      font-weight: 800;
+      font-size: 1rem;
+      padding: 14px;
+      border: 2px solid var(--color-oro-oscuro);
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      position: relative;
+      transition: var(--transicion-suave);
+      overflow: hidden;
+    }
+
+    .boton-premium:hover {
+      border-color: var(--color-oro);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(200, 170, 110, 0.3);
+      transform: translateY(-2px);
+    }
+
+    /* Botón de acción principal (Cian) */
+    .boton-premium.btn-accion {
+      border-color: var(--color-cian);
+      color: var(--color-cian);
+      background: linear-gradient(to bottom, #051e22 0%, #010a13 100%);
+      margin-top: 10px;
+    }
+
+    .boton-premium.btn-accion:hover {
+      background: var(--color-cian);
+      color: var(--bg-profundo);
+      border-color: #fff;
+      box-shadow: 0 0 25px var(--color-cian-glow);
+    }
+
+    .boton-premium:active { transform: translateY(1px) scale(0.98); }
+
+    /* Consola de Estado Técnica */
+    .consola {
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid #222;
+      border-left: 3px solid var(--color-cian);
+      padding: 15px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      min-height: 60px;
+      color: #888;
+      margin-top: auto;
+    }
+
+    /* Contenedor del Canvas con borde premium */
+    .contenedor-canvas {
+      position: relative;
+      padding: 6px;
+      background: linear-gradient(135deg, var(--color-oro-oscuro) 0%, #1a1a1a 50%, var(--color-oro-oscuro) 100%);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    }
+
+    canvas {
+      display: block;
+      background-color: var(--bg-puro);
+      border: 2px solid #000;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Matriz de Transformación R²</h1>
+  </header>
+  
+  <div class="contenedor-principal">
+    <div class="seccion-controles">
+      <div class="panel-premium">
+        <div class="grupo-control">
+          <label>Geometría de Entrada (X,Y; X,Y...)</label>
+          <input type="text" id="puntos-entrada" value="0,0;2,0;2,2;0,2" placeholder="ej: 0,0;3,1;2,4">
+        </div>
+        <button class="boton-premium" onclick="procesarPuntos()">Cargar Geometría</button>
+      </div>
+
+      <div class="panel-premium">
+        <div class="grupo-control">
+          <label>Tipo de Transformación Lineal</label>
+          <select id="tipo-transformacion">
+            <option value="rotacion">Rotación (Grados Sexagesimales)</option>
+            <option value="escalado">Escalado Diferencial (Sx, Sy)</option>
+            <option value="reflexionX">Reflexión Eje Abscisas (X)</option>
+            <option value="reflexionY">Reflexión Eje Ordenadas (Y)</option>
+            <option value="reflexionOrigen">Reflexión Respecto al Origen</option>
+          </select>
+        </div>
+
+        <div class="grupo-control">
+          <label>Parámetros de Operación (ej: 90 o 1.5,2)</label>
+          <input type="text" id="parametros-operacion" placeholder="Ingrese magnitud...">
+        </div>
+
+        <button class="boton-premium btn-accion" onclick="ejecutarTransformacion()">Aplicar Transformación</button>
+      </div>
+
+      <div class="panel-premium consola" id="consola-estado">
+        SISTEMA DE CÁLCULO VECTORIAL ONLINE.<br>Esperando definición de geometría...
+      </div>
+    </div>
+
+    <div class="contenedor-canvas">
+      <canvas id="plano-cartesiano" width="600" height="600"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // Referencias correctas a los elementos actualizados
+    const canvas = document.getElementById("plano-cartesiano");
+    const ctx = canvas.getContext("2d");
+    const consola = document.getElementById("consola-estado");
+    
+    let figuraOriginal = null;
+    let figuraActual = null;
+    let escalaGlobal = 1;
+    let estaAnimando = false;
+
+    // Configuración visual profesional
+    const COLOR_ESTELA = "rgba(10, 200, 185, 0.15)"; // Cian desvanecido para movimiento
+    const COLOR_FINAL = "#c8aa6e";               // Oro para estado estático
+    const COLOR_DESTELLO = "#0ac8b9";            // Cian brillante para impacto
+
+    // Función de registro técnica y limpia
+    function registrarEstado(msj, tipo = "info") {
+      consola.innerHTML = `<span style="color: ${tipo === 'error' ? 'var(--color-error)' : 'var(--color-cian)'}">> ${msj}</span>`;
+    }
+
+    // Calcula escala dinámica profesional
+    function ajustarEscalaDinamica(puntosA, puntosB = []) {
+      let valorMax = 1;
+      const todosLosPuntos = [...puntosA, ...puntosB];
+      todosLosPuntos.forEach(([x, y]) => {
+        if (Math.abs(x) > valorMax) valorMax = Math.abs(x);
+        if (Math.abs(y) > valorMax) valorMax = Math.abs(y);
+      });
+      // 35% de margen para profesionalismo visual
+      escalaGlobal = (canvas.width / 2) / (valorMax * 1.35); 
+    }
+
+    // Dibuja la cuadrícula cartesiana técnica
+    function dibujarSistemaBase() {
+      const centroX = canvas.width / 2;
+      const centroY = canvas.height / 2;
+
+      ctx.shadowBlur = 0; // Desactivar sombras para la base
+
+      // Ejes principales técnicos
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#443a25"; // Oro muy oscuro
+      ctx.beginPath();
+      ctx.moveTo(centroX, 0); ctx.lineTo(centroX, canvas.height);
+      ctx.moveTo(0, centroY); ctx.lineTo(canvas.width, centroY);
+      ctx.stroke();
+
+      // Sub-cuadrícula sutil
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#111"; // Casi negro
+      let intervalo = escalaGlobal;
+      // Ajuste automático si la escala es muy pequeña
+      if (intervalo < 20) intervalo *= 5; 
+
+      ctx.beginPath();
+      for (let i = intervalo; i < centroX; i += intervalo) {
+        // Verticales
+        ctx.moveTo(centroX + i, 0); ctx.lineTo(centroX + i, canvas.height);
+        ctx.moveTo(centroX - i, 0); ctx.lineTo(centroX - i, canvas.height);
+        // Horizontales
+        ctx.moveTo(0, centroY + i); ctx.lineTo(canvas.width, centroY + i);
+        ctx.moveTo(0, centroY - i); ctx.lineTo(canvas.width, centroY - i);
+      }
+      ctx.stroke();
+    }
+
+    // Dibuja polígono con efectos técnicos
+    function renderizarPoligono(puntos, color, conBrillo = false) {
+      if (!puntos || puntos.length === 0) return;
+      const centroX = canvas.width / 2;
+      const centroY = canvas.height / 2;
+
+      ctx.beginPath();
+      
+      if (conBrillo) {
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = COLOR_DESTELLO;
+        ctx.lineWidth = 3;
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 2;
+      }
+
+      puntos.forEach(([x, y], i) => {
+        let pixelX = centroX + x * escalaGlobal;
+        let pixelY = centroY - y * escalaGlobal; // Inversión cartesiana de Y
+        if (i === 0) ctx.moveTo(pixelX, pixelY);
+        else ctx.lineTo(pixelX, pixelY);
+      });
+      
+      ctx.closePath();
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      
+      // Nodos estructurales
+      ctx.shadowBlur = 0; 
+      ctx.fillStyle = conBrillo ? "#fff" : color;
+      puntos.forEach(([x, y]) => {
+        let pixelX = centroX + x * escalaGlobal;
+        let pixelY = centroY - y * escalaGlobal;
+        ctx.beginPath();
+        ctx.arc(pixelX, pixelY, conBrillo ? 4 : 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // Procesa y carga la geometría de entrada
+    function procesarPuntos() {
+      if (estaAnimando) return;
+      // Selección correcta del input técnico
+      let entrada = document.getElementById("puntos-entrada").value.trim();
+      try {
+        let pares = entrada.split(";");
+        let figuraTemporal = pares.map(p => {
+          let coordenadas = p.split(",");
+          if (coordenadas.length !== 2) throw new Error("Formato de coordenadas incompleto.");
+          return [parseFloat(coordenadas[0]), parseFloat(coordenadas[1])];
+        });
+
+        if (figuraTemporal.length < 2) throw new Error("Se requieren al menos 2 nodos.");
+
+        // Cierre automático de geometría si no lo está
+        if (figuraTemporal.length > 2) {
+          let inicio = figuraTemporal[0];
+          let fin = figuraTemporal[figuraTemporal.length - 1];
+          if (inicio[0] !== fin[0] || inicio[1] !== fin[1]) figuraTemporal.push([...inicio]);
+        }
+
+        figuraOriginal = figuraTemporal;
+        figuraActual = [...figuraTemporal];
+        
+        ajustarEscalaDinamica(figuraActual);
+        
+        // Renderizado inicial limpio
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        dibujarSistemaBase();
+        // Visualización inicial en Cian profesional
+        renderizarPoligono(figuraActual, COLOR_DESTELLO, true); 
+
+        registrarEstado("GEOMETRÍA DEFINIDA CORRECTAMENTE.");
+      } catch (e) {
+        registrarEstado(`ERROR TÉCNICO: ${e.message}`, "error");
+      }
+    }
+
+    // --- BUCLE DE ANIMACIÓN PROFESIONAL CON ESTELA ---
+    function animarCanalizacion(origen, destino) {
+      estaAnimando = true;
+      let framesTotales = 60; // 1 segundo a 60fps
+      let frameActual = 0;
+
+      function bucle() {
+        // Efecto de estela: fondo semi-transparente que desvanece trazos anteriores
+        ctx.fillStyle = "rgba(1, 2, 5, 0.15)"; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        dibujarSistemaBase(); // Redibujar sistema base bajo la estela
+
+        let t = frameActual / framesTotales;
+        // Función de aceleración Ease out cubic para suavidad profesional
+        let ease = 1 - Math.pow(1 - t, 3); 
+
+        // Interpolación lineal de puntos
+        let intermedio = origen.map(([x, y], j) => [
+          x + ease * (destino[j][0] - x),
+          y + ease * (destino[j][1] - y)
+        ]);
+        
+        // Dibujo de figura de referencia (origen sutil)
+        renderizarPoligono(origen, "rgba(200,170,110, 0.1)", false);
+
+        // Dibujo de la figura en transmutación con brillo técnico
+        renderizarPoligono(intermedio, COLOR_DESTELLO, true);
+
+        if (frameActual < framesTotales) {
+          frameActual++;
+          requestAnimationFrame(bucle);
+        } else {
+          estaAnimando = false;
+          figuraActual = destino;
+          // Renderizado final limpio y estático
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          dibujarSistemaBase();
+          renderizarPoligono(origen, "rgba(10, 200, 185, 0.2)", false); // Referencia origen desvanecida
+          renderizarPoligono(destino, COLOR_FINAL, true); // Estado final Oro brillante
+          registrarEstado("TRANSFORMACIÓN LINEAL APLICADA.");
+        }
+      }
+      bucle();
+    }
+
+    // --- LÓGICA MATEMÁTICA DE TRANSFORMACIONES R² ---
+    function rotarPuntos(puntos, angulo) {
+      let radianes = angulo * Math.PI / 180;
+      return puntos.map(([x, y]) => [
+        x * Math.cos(radianes) - y * Math.sin(radianes),
+        x * Math.sin(radianes) + y * Math.cos(radianes)
+      ]);
+    }
+    function escalarPuntos(puntos, sx, sy) { return puntos.map(([x, y]) => [x * sx, y * sy]); }
+    function reflexionarX(puntos) { return puntos.map(([x, y]) => [x, -y]); }
+    function reflexionarY(puntos) { return puntos.map(([x, y]) => [-x, y]); }
+    function reflexionarOrigen(puntos) { return puntos.map(([x, y]) => [-x, -y]); }
+
+    // Ejecuta la operación seleccionada
+    function ejecutarTransformacion() {
+      if (!figuraActual || estaAnimando) return;
+
+      let operacion = document.getElementById("tipo-transformacion").value;
+      let parametro = document.getElementById("parametros-operacion").value;
+      let figuraTransformada = null;
+
+      try {
+        if (operacion === "rotacion") {
+          let ang = parseFloat(parametro);
+          if (isNaN(ang)) throw new Error("Magnitud angular inválida.");
+          figuraTransformada = rotarPuntos(figuraActual, ang);
+          registrarEstado(`PROCESANDO: Rotación de ${ang}° sexagesimales...`);
+        } 
+        else if (operacion === "escalado") {
+          let valores = parametro.split(",");
+          if (valores.length !== 2) throw new Error("Se requieren dos magnitudes (Sx,Sy).");
+          let sx = parseFloat(valores[0]), sy = parseFloat(valores[1]);
+          if (isNaN(sx) || isNaN(sy)) throw new Error("Magnitudes de escalado corruptas.");
+          figuraTransformada = escalarPuntos(figuraActual, sx, sy);
+          registrarEstado(`PROCESANDO: Escalado diferencial por vector [${sx},${sy}]...`);
+        } 
+        else {
+          if(operacion === "reflexionX") { figuraTransformada = reflexionarX(figuraActual); registrarEstado("PROCESANDO: Reflexión Eje X..."); }
+          if(operacion === "reflexionY") { figuraTransformada = reflexionarY(figuraActual); registrarEstado("PROCESANDO: Reflexión Eje Y..."); }
+          if(operacion === "reflexionOrigen") { figuraTransformada = reflexionarOrigen(figuraActual); registrarEstado("PROCESANDO: Reflexión respecto al Origen..."); }
+        }
+
+        // Recalcular escala para que la figura transformada quepa profesionalmente
+        ajustarEscalaDinamica(figuraActual, figuraTransformada);
+        animarCanalizacion(figuraActual, figuraTransformada);
+      } catch (e) {
+        registrarEstado(`ERROR DE CANALIZACIÓN: ${e.message}`, "error");
+      }
+    }
+
+    // Inicializar sistema base vacío al cargar
+    dibujarSistemaBase();
+
+  </script>
+</body>
+</html>
